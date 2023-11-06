@@ -8,7 +8,6 @@ from cv2 import rectangle
 import shortuuid
 import xml.etree.ElementTree as ET
 from operator import indexOf
-from multiprocessing import Pool
 import tensorflow as tf
 from tensorflow import keras
 import time
@@ -18,6 +17,16 @@ import os
 import shutil
 import tqdm
 import random
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+from matplotlib import cm
+from IPython.display import Image, display
+
+
+categories = ["APIACEAE", "ARTEMISIA", "ARTEMISIA_SIDE", "BETULA", "BETULA_SIDE","CHENOPODIACEAE", 
+              "CYPERACEAE", "HELIANTHEMUM","LYCOPODIUM", "LYCOPODIUM_HALF", "NPP_CLASS1", "NPP_CLASS2", 
+              "NPP_CLASS3", "NPP_CLASS4", "PINUS_WING", "POACEAE", "POACEAE_SIDE", "SALIX"]
 
 
 def get_focused_from_ROI(img_list, size : int = 100, shift : int = 50):
@@ -710,3 +719,64 @@ def count_pollen (dir : os.PathLike, output : os.PathLike, seg_threshold : float
     #--------------------------------------------------------------------------------------------------------
 
     return DB
+
+
+
+def create_object_detection_boxes(images_dir, save_dir):
+    for SUBCLASS in os.listdir(images_dir):
+        SUB_PATH = os.path.join(images_dir, SUBCLASS)
+        SAVE_PATH = os.path.join(save_dir, SUBCLASS)
+
+        if not os.path.exists(SAVE_PATH):
+            os.makedirs(os.path.join(SAVE_PATH))
+        for file in os.listdir(SUB_PATH):
+            if os.path.splitext(file)[1] in [".jpg", ".png"]:
+                image = cv2.imread(os.path.join(SUB_PATH, file))
+                annotation = os.path.join(SUB_PATH, os.path.splitext(file)[0] + ".xml")
+                if not os.path.exists(annotation):
+                    continue
+                tree = ET.parse(annotation)
+                root = tree.getroot()
+
+                annotations = []
+                names = []
+                quality = []
+                
+
+                for object in root.iter('object'):
+                    names.append(str(object.find("name").text))
+                    quality.append(int(object.find("difficult").text))
+
+                    for box in object.iter("bndbox"):
+
+                        xmin = int(box.find('xmin').text)
+                        ymin = int(box.find('ymin').text)
+                        xmax = int(box.find('xmax').text)
+                        ymax = int(box.find('ymax').text)
+                    
+                
+                    annotations.append([xmin, ymin, xmax, ymax])
+
+                for idx, bbox in enumerate(annotations):
+
+                    start_point = (int(bbox[0]), int(bbox[1]))
+                    end_point = (int(bbox[2]), int(bbox[3]))
+
+                    cv2.rectangle(image, start_point, end_point, color=(0,0,0), thickness=1)
+
+                    text = ""
+                    if quality[idx] == 1: text = "dif:" + names[idx]
+                    elif quality[idx] == 0: text = names[idx]
+
+                    
+                    cv2.putText(
+                        image,
+                        text,
+                        (int(bbox[0]), int(bbox[1]) - 10),
+                        fontFace = cv2.FONT_HERSHEY_SIMPLEX,
+                        fontScale = 0.6,
+                        color = (0, 255, 0),
+                        thickness=2
+                    )
+                    
+                cv2.imwrite(os.path.join(SAVE_PATH, file), image)
