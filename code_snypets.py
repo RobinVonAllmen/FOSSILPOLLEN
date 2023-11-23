@@ -502,7 +502,14 @@ def calculate_blurriness(image):
     blur_score = cv2.Laplacian(gray, cv2.CV_64F, ksize=3).var()
     return blur_score
 
-def count_pollen (dir : os.PathLike, output : os.PathLike, seg_threshold : float = 0.15, threshold = 0.8, cnn_model = None , inspect_boxes : bool = False, categories = categories):
+@tf.function
+def detect_fn(image, detection_model):
+    image, shapes = detection_model.preprocess(image)
+    prediction_dict = detection_model.predict(image, shapes)
+    detections = detection_model.postprocess(prediction_dict, shapes)
+    return detections
+
+def count_pollen (dir : os.PathLike, output : os.PathLike, seg_threshold : float = 0.15, threshold = 0.8, cnn_model = None , detection_model = None, inspect_boxes : bool = False, categories = categories):
     
     """ This function reads all images in a directory and uses a segmentation model to extract and then a classification model to classify the images correctly.
 
@@ -543,9 +550,6 @@ def count_pollen (dir : os.PathLike, output : os.PathLike, seg_threshold : float
         if os.path.splitext(frame)[1] not in [".jpg", ".png"]:
             continue
 
-        if frame_count >= len(frames)/10:
-            break
-
         frame_count += 1
 
         #------------- Load and Preprocess input images ---------------------
@@ -561,7 +565,7 @@ def count_pollen (dir : os.PathLike, output : os.PathLike, seg_threshold : float
 
         #------------- Detection of Pollen -----------------------------------
         try:
-            detections = detect_fn(input_tensor)
+            detections = detect_fn(input_tensor, detection_model)
         except:
             continue
         num_detections = int(detections.pop('num_detections'))
