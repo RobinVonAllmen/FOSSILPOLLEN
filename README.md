@@ -1,5 +1,5 @@
 # Method development and application of object detection and classification to Quaternary fossil pollen sequences reconstruction
-The code published here was used for the study in von Allmen et al.
+The code published here was used for the study in [von Allmen et al.(2024)](https://doi.org/10.1016/j.quascirev.2024.108521)
 
 It contains instructions to create and manage a virtual environment containing the respective versions for packages that were used in von Allmen et al. Note that the installation of the object detection package in python requries additional steps (follow this tutorial). However, the object detection package is preinstalled on Google Colab and other platforms and may be more accessible for individuals with limited computing capacity. 
 
